@@ -78,7 +78,7 @@ class MeetingController extends GetxController {
   var _cameraOff = false.obs;
   var _microphoneOff = false.obs;
   var _speakerOn = true.obs;
-  GlobalKey<ScaffoldState>? _scaffoldkey;
+  GlobalKey<ScaffoldMessengerState>? _scaffoldkey;
   var name = ''.obs;
   var room = ''.obs;
 
@@ -99,7 +99,7 @@ class MeetingController extends GetxController {
   }
 
   connect() async {
-    _scaffoldkey = GlobalKey();
+    _scaffoldkey = GlobalKey<ScaffoldMessengerState>();
 
     prefs = await _ionController.prefs();
 
@@ -251,7 +251,8 @@ class MeetingController extends GetxController {
   _switchCamera() {
     if (_localVideo != null &&
         _localVideo!.stream.getVideoTracks().length > 0) {
-      _localVideo?.stream.getVideoTracks()[0].switchCamera();
+      var videoTrack = _localVideo?.stream.getVideoTracks()[0];
+      Helper.switchCamera(videoTrack!);
     } else {
       _showSnackBar(":::Unable to switch the camera:::");
     }
@@ -297,28 +298,32 @@ class MeetingController extends GetxController {
 
   _showSnackBar(String message) {
     print(message);
-    /*
-    _scaffoldkey.currentState!.showSnackBar(SnackBar(
-      content: Container(
-        //color: Colors.white,
-        decoration: BoxDecoration(
-            color: Colors.black38,
-            border: Border.all(width: 2.0, color: Colors.black),
-            borderRadius: BorderRadius.circular(20)),
-        margin: EdgeInsets.fromLTRB(45, 0, 45, 45),
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Text(message,
-              style: TextStyle(color: Colors.white),
-              textAlign: TextAlign.center),
-        ),
-      ),
-      backgroundColor: Colors.transparent,
-      behavior: SnackBarBehavior.floating,
-      duration: Duration(
-        milliseconds: 1000,
-      ),
-    ));*/
+
+    // BUGBUG: Cannot connect snack bar  to widge context!
+    // final _snackBar = SnackBar(
+    //   content: Container(
+    //     //color: Colors.white,
+    //     decoration: BoxDecoration(
+    //         color: Colors.black38,
+    //         border: Border.all(width: 2.0, color: Colors.black),
+    //         borderRadius: BorderRadius.circular(20)),
+    //     margin: EdgeInsets.fromLTRB(45, 0, 45, 45),
+    //     child: Padding(
+    //       padding: const EdgeInsets.all(8.0),
+    //       child: Text(message,
+    //           style: TextStyle(color: Colors.white),
+    //           textAlign: TextAlign.center),
+    //     ),
+    //   ),
+    //   backgroundColor: Colors.transparent,
+    //   behavior: SnackBarBehavior.floating,
+    //   duration: Duration(
+    //     milliseconds: 1000,
+    //   ),
+    // );
+    // final _messangerKey = GlobalKey<ScaffoldMessengerState>();
+    // ScaffoldMessenger(key: _messangerKey, child: _snackBar);
+    // ScaffoldMessenger.of(context).showSnackBar(_snackBar);
   }
 
   _hangUp() {
