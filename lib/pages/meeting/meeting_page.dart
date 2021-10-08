@@ -71,6 +71,11 @@ class MeetingController extends GetxController {
   final videoRenderers = Rx<List<VideoRendererAdapter>>([]);
   LocalStream? _localStream;
 
+  var _context = null;
+  set context(BuildContext context) {
+    _context = context;
+  }
+
   IonAppBiz? get biz => _ionController.biz;
 
   IonSDKSFU? get sfu => _ionController.sfu;
@@ -78,7 +83,6 @@ class MeetingController extends GetxController {
   var _cameraOff = false.obs;
   var _microphoneOff = false.obs;
   var _speakerOn = true.obs;
-  GlobalKey<ScaffoldMessengerState>? _scaffoldkey;
   var name = ''.obs;
   var room = ''.obs;
 
@@ -99,8 +103,6 @@ class MeetingController extends GetxController {
   }
 
   connect() async {
-    _scaffoldkey = GlobalKey<ScaffoldMessengerState>();
-
     prefs = await _ionController.prefs();
 
     //if this client is hosted as a website, using https, the ion-backend has to be
@@ -299,31 +301,29 @@ class MeetingController extends GetxController {
   _showSnackBar(String message) {
     print(message);
 
-    // BUGBUG: Cannot connect snack bar  to widge context!
-    // final _snackBar = SnackBar(
-    //   content: Container(
-    //     //color: Colors.white,
-    //     decoration: BoxDecoration(
-    //         color: Colors.black38,
-    //         border: Border.all(width: 2.0, color: Colors.black),
-    //         borderRadius: BorderRadius.circular(20)),
-    //     margin: EdgeInsets.fromLTRB(45, 0, 45, 45),
-    //     child: Padding(
-    //       padding: const EdgeInsets.all(8.0),
-    //       child: Text(message,
-    //           style: TextStyle(color: Colors.white),
-    //           textAlign: TextAlign.center),
-    //     ),
-    //   ),
-    //   backgroundColor: Colors.transparent,
-    //   behavior: SnackBarBehavior.floating,
-    //   duration: Duration(
-    //     milliseconds: 1000,
-    //   ),
-    // );
-    // final _messangerKey = GlobalKey<ScaffoldMessengerState>();
-    // ScaffoldMessenger(key: _messangerKey, child: _snackBar);
-    // ScaffoldMessenger.of(context).showSnackBar(_snackBar);
+    final _snackBar = SnackBar(
+      content: Container(
+        //color: Colors.white,
+        decoration: BoxDecoration(
+            color: Colors.black38,
+            border: Border.all(width: 2.0, color: Colors.black),
+            borderRadius: BorderRadius.circular(20)),
+        margin: EdgeInsets.fromLTRB(45, 0, 45, 45),
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(message,
+              style: TextStyle(color: Colors.white),
+              textAlign: TextAlign.center),
+        ),
+      ),
+      backgroundColor: Colors.transparent,
+      behavior: SnackBarBehavior.floating,
+      duration: Duration(
+        milliseconds: 1000,
+      ),
+    );
+
+    ScaffoldMessenger.of(_context).showSnackBar(_snackBar);
   }
 
   _hangUp() {
@@ -584,10 +584,12 @@ class MeetingView extends GetView<MeetingController> {
 
   @override
   Widget build(BuildContext context) {
+    controller.context = context;
+
     return OrientationBuilder(builder: (context, orientation) {
       return SafeArea(
         child: Scaffold(
-            key: controller._scaffoldkey,
+            key: null,
             body: Container(
               color: Colors.black87,
               child: Stack(
