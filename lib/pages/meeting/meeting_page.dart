@@ -6,11 +6,23 @@ import 'package:community_material_icon/community_material_icon.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ion/controllers/ion_controller.dart';
 import 'package:get/get.dart';
+import 'package:property_change_notifier/property_change_notifier.dart';
 
 class MeetingBinding implements Bindings {
   @override
   void dependencies() {
     Get.lazyPut<MeetingController>(() => MeetingController());
+  }
+}
+
+class WebRTCStates extends PropertyChangeNotifier<String> {
+  bool _joined = false;
+
+  bool get joined => _joined;
+
+  set joined(bool value) {
+    _joined = value;
+    notifyListeners('joined');
   }
 }
 
@@ -66,10 +78,16 @@ class VideoRendererAdapter {
 }
 
 class MeetingController extends GetxController {
+  final webRTCStates = WebRTCStates();
   final _ionController = Get.find<IonController>();
   late SharedPreferences prefs;
   final videoRenderers = Rx<List<VideoRendererAdapter>>([]);
   LocalStream? _localStream;
+
+  var _context = null;
+  set context(BuildContext context) {
+    _context = context;
+  }
 
   IonAppBiz? get biz => _ionController.biz;
 
@@ -78,7 +96,6 @@ class MeetingController extends GetxController {
   var _cameraOff = false.obs;
   var _microphoneOff = false.obs;
   var _speakerOn = true.obs;
-  GlobalKey<ScaffoldState>? _scaffoldkey;
   var name = ''.obs;
   var room = ''.obs;
 
@@ -99,8 +116,6 @@ class MeetingController extends GetxController {
   }
 
   connect() async {
-    _scaffoldkey = GlobalKey();
-
     prefs = await _ionController.prefs();
 
     //if this client is hosted as a website, using https, the ion-backend has to be
@@ -143,10 +158,12 @@ class MeetingController extends GetxController {
         }
       }
       this._showSnackBar(":::Join success:::");
+      webRTCStates.joined = true;
     };
 
     biz?.onLeave = (String reason) {
       this._showSnackBar(":::Leave success:::");
+      webRTCStates.joined = false;
     };
 
     biz?.onPeerEvent = (PeerEvent event) {
@@ -251,7 +268,8 @@ class MeetingController extends GetxController {
   _switchCamera() {
     if (_localVideo != null &&
         _localVideo!.stream.getVideoTracks().length > 0) {
-      _localVideo?.stream.getVideoTracks()[0].switchCamera();
+      var videoTrack = _localVideo?.stream.getVideoTracks()[0];
+      Helper.switchCamera(videoTrack!);
     } else {
       _showSnackBar(":::Unable to switch the camera:::");
     }
@@ -293,12 +311,14 @@ class MeetingController extends GetxController {
     });
     videoRenderers.value.clear();
     await _ionController.close();
+
+    webRTCStates.joined = false;
   }
 
   _showSnackBar(String message) {
     print(message);
-    /*
-    _scaffoldkey.currentState!.showSnackBar(SnackBar(
+
+    final _snackBar = SnackBar(
       content: Container(
         //color: Colors.white,
         decoration: BoxDecoration(
@@ -318,7 +338,9 @@ class MeetingController extends GetxController {
       duration: Duration(
         milliseconds: 1000,
       ),
-    ));*/
+    );
+
+    ScaffoldMessenger.of(_context).showSnackBar(_snackBar);
   }
 
   _hangUp() {
@@ -579,11 +601,14 @@ class MeetingView extends GetView<MeetingController> {
 
   @override
   Widget build(BuildContext context) {
+    controller.context = context;
+
     return OrientationBuilder(builder: (context, orientation) {
       return SafeArea(
-        child: Scaffold(
-            key: controller._scaffoldkey,
-            body: Container(
+          child: Scaffold(
+        body: PropertyChangeProvider<WebRTCStates, String>(
+            value: controller.webRTCStates,
+            child: Container(
               color: Colors.black87,
               child: Stack(
                 children: <Widget>[
@@ -618,8 +643,15 @@ class MeetingView extends GetView<MeetingController> {
                       ),
                     ),
                   ),
-                  Obx(() =>
-                      (remoteVideos.isEmpty) ? _buildLoading() : Container()),
+                  PropertyChangeConsumer<WebRTCStates, String>(
+                    builder: (context, model, properties) {
+                      if (model!.joined) {
+                        return Container();
+                      } else {
+                        return _buildLoading();
+                      }
+                    },
+                  ),
                   Positioned(
                     left: 0,
                     right: 0,
@@ -701,7 +733,7 @@ class MeetingView extends GetView<MeetingController> {
                 ],
               ),
             )),
-      );
+      ));
     });
   }
 }
